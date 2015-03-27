@@ -34,11 +34,11 @@ public class ObjectsInitializer {
         this(null);
     }
 
-    public ObjectsInitializer(LwM2mModel model) {
+    public ObjectsInitializer(final LwM2mModel model) {
         if (model == null) {
-            List<ObjectModel> objects = ObjectLoader.loadDefault();
-            HashMap<Integer, ObjectModel> map = new HashMap<Integer, ObjectModel>();
-            for (ObjectModel objectModel : objects) {
+            final List<ObjectModel> objects = ObjectLoader.loadDefault();
+            final HashMap<Integer, ObjectModel> map = new HashMap<Integer, ObjectModel>();
+            for (final ObjectModel objectModel : objects) {
                 map.put(objectModel.id, objectModel);
             }
             this.model = new LwM2mModel(map);
@@ -47,17 +47,17 @@ public class ObjectsInitializer {
         }
     }
 
-    public void setClassForObject(int objectId, Class<? extends LwM2mInstanceEnabler> clazz) {
+    public void setClassForObject(final int objectId, final Class<? extends LwM2mInstanceEnabler> clazz) {
         classes.put(objectId, clazz);
     }
 
     public List<ObjectEnabler> createMandatory() {
-        Collection<ObjectModel> objectModels = model.getObjectModels();
+        final Collection<ObjectModel> objectModels = model.getObjectModels();
 
-        List<ObjectEnabler> enablers = new ArrayList<ObjectEnabler>();
-        for (ObjectModel objectModel : objectModels) {
+        final List<ObjectEnabler> enablers = new ArrayList<ObjectEnabler>();
+        for (final ObjectModel objectModel : objectModels) {
             if (objectModel.mandatory) {
-                ObjectEnabler objectEnabler = createNodeEnabler(objectModel);
+                final ObjectEnabler objectEnabler = createNodeEnabler(objectModel);
                 if (objectEnabler != null)
                     enablers.add(objectEnabler);
             }
@@ -65,11 +65,11 @@ public class ObjectsInitializer {
         return enablers;
     }
 
-    public List<ObjectEnabler> create(int... objectId) {
-        List<ObjectEnabler> enablers = new ArrayList<ObjectEnabler>();
+    public List<ObjectEnabler> create(final int... objectId) {
+        final List<ObjectEnabler> enablers = new ArrayList<ObjectEnabler>();
         for (int i = 0; i < objectId.length; i++) {
-            ObjectModel objectModel = model.getObjectModel(objectId[i]);
-            ObjectEnabler objectEnabler = createNodeEnabler(objectModel);
+            final ObjectModel objectModel = model.getObjectModel(objectId[i]);
+            final ObjectEnabler objectEnabler = createNodeEnabler(objectModel);
             if (objectEnabler != null)
                 enablers.add(objectEnabler);
 
@@ -77,20 +77,24 @@ public class ObjectsInitializer {
         return enablers;
     }
 
-    protected ObjectEnabler createNodeEnabler(ObjectModel objectModel) {
-        HashMap<Integer, LwM2mInstanceEnabler> instances = new HashMap<Integer, LwM2mInstanceEnabler>();
+    protected ObjectEnabler createNodeEnabler(final ObjectModel objectModel) {
+        final HashMap<Integer, LwM2mInstanceEnabler> instances = new HashMap<Integer, LwM2mInstanceEnabler>();
 
         if (!objectModel.multiple) {
-            LwM2mInstanceEnabler newInstance = createInstance(objectModel);
+            final LwM2mInstanceEnabler newInstance = createInstance(objectModel);
             if (newInstance != null) {
                 instances.put(0, newInstance);
                 return new ObjectEnabler(objectModel.id, objectModel, instances, SimpleInstanceEnabler.class);
             }
         }
+        // This is an overstatement and we need to have one for the
+        if (classes.containsKey(objectModel.id)) {
+            return new ObjectEnabler(objectModel.id, objectModel, instances, classes.get(objectModel.id));
+        }
         return new ObjectEnabler(objectModel.id, objectModel, instances, SimpleInstanceEnabler.class);
     }
 
-    protected LwM2mInstanceEnabler createInstance(ObjectModel objectModel) {
+    protected LwM2mInstanceEnabler createInstance(final ObjectModel objectModel) {
         Class<? extends LwM2mInstanceEnabler> clazz = classes.get(objectModel.id);
         if (clazz == null)
             clazz = SimpleInstanceEnabler.class;

@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.californium.LeshanClient;
@@ -38,10 +37,9 @@ import org.eclipse.leshan.client.resource.ObjectEnabler;
 import org.eclipse.leshan.client.resource.ObjectsInitializer;
 import org.eclipse.leshan.core.node.LwM2mResource;
 import org.eclipse.leshan.core.node.Value;
+import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
-import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.response.LwM2mResponse;
-import org.eclipse.leshan.core.response.RegisterResponse;
 import org.eclipse.leshan.core.response.ValueResponse;
 
 /*
@@ -58,47 +56,63 @@ public class LeshanClientExample {
             System.out
                     .println("Usage:\njava -jar target/leshan-client-example-*-SNAPSHOT-jar-with-dependencies.jar [ClientIP] [ClientPort] ServerIP ServerPort");
         } else {
-            if (args.length == 4)
-                new LeshanClientExample(args[0], Integer.parseInt(args[1]), args[2], Integer.parseInt(args[3]));
-            else
-                new LeshanClientExample("0", 0, args[0], Integer.parseInt(args[1]));
+            try {
+                if (args.length == 4)
+                    new LeshanClientExample(args[0], Integer.parseInt(args[1]), args[2], Integer.parseInt(args[3]));
+                else
+                    new LeshanClientExample("0", 0, args[0], Integer.parseInt(args[1]));
+            } catch (final RuntimeException e) {
+                System.err.println("Runtime Error " + e.getLocalizedMessage());
+                e.printStackTrace();
+                System.exit(0);
+            }
         }
     }
 
     public LeshanClientExample(final String localHostName, final int localPort, final String serverHostName,
             final int serverPort) {
+        // TODO make this a parameter
+        final int bootstrapServerPort = 9000;
 
         // Initialize object list
-        ObjectsInitializer initializer = new ObjectsInitializer();
+        final ObjectsInitializer initializer = new ObjectsInitializer();
+        initializer.setClassForObject(0, Security.class);
+        initializer.setClassForObject(1, Server.class);
         initializer.setClassForObject(3, Device.class);
-        List<ObjectEnabler> enablers = initializer.createMandatory();
+        final List<ObjectEnabler> enablers = initializer.createMandatory();
 
         // Create client
         final InetSocketAddress clientAddress = new InetSocketAddress(localHostName, localPort);
         final InetSocketAddress serverAddress = new InetSocketAddress(serverHostName, serverPort);
+        final InetSocketAddress bootstrapServerAddress = new InetSocketAddress(serverHostName, bootstrapServerPort);
 
-        final LeshanClient client = new LeshanClient(clientAddress, serverAddress, new ArrayList<LwM2mObjectEnabler>(
-                enablers));
+        final LeshanClient client = new LeshanClient(clientAddress, bootstrapServerAddress, serverAddress,
+                new ArrayList<LwM2mObjectEnabler>(enablers));
 
         // Start the client
         client.start();
 
         // Register to the server provided
-        final String endpointIdentifier = UUID.randomUUID().toString();
-        RegisterResponse response = client.send(new RegisterRequest(endpointIdentifier));
+        final String endpointIdentifier = "SampleEndpointId"; // Value defined in the main of BootstrapStoreImpl
+                                                              // //UUID.randomUUID().toString();
 
-        // Report registration response.
-        System.out.println("Device Registration (Success? " + response.getCode() + ")");
-        if (response.getCode() == ResponseCode.CREATED) {
-            System.out.println("\tDevice: Registered Client Location '" + response.getRegistrationID() + "'");
-            registrationID = response.getRegistrationID();
-        } else {
-            // TODO Should we have a error message on response ?
-            // System.err.println("\tDevice Registration Error: " + response.getErrorMessage());
-            System.err.println("\tDevice Registration Error: " + response.getCode());
-            System.err
-                    .println("If you're having issues connecting to the LWM2M endpoint, try using the DTLS port instead");
-        }
+        final LwM2mResponse bootstrapResponse = client.send(new BootstrapRequest(endpointIdentifier));
+        System.err.println("For Bootstrap we got a " + bootstrapResponse.getCode());
+
+        // final RegisterResponse response = client.send(new RegisterRequest(endpointIdentifier));
+        //
+        // // Report registration response.
+        // System.out.println("Device Registration (Success? " + response.getCode() + ")");
+        // if (response.getCode() == ResponseCode.CREATED) {
+        // System.out.println("\tDevice: Registered Client Location '" + response.getRegistrationID() + "'");
+        // registrationID = response.getRegistrationID();
+        // } else {
+        // // TODO Should we have a error message on response ?
+        // // System.err.println("\tDevice Registration Error: " + response.getErrorMessage());
+        // System.err.println("\tDevice Registration Error: " + response.getCode());
+        // System.err
+        // .println("If you're having issues connecting to the LWM2M endpoint, try using the DTLS port instead");
+        // }
 
         // Deregister on shutdown and stop client.
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -113,11 +127,22 @@ public class LeshanClientExample {
         });
     }
 
+    public static class Server extends BaseInstanceEnabler {
+        public Server() {
+        }
+    }
+
+    public static class Security extends BaseInstanceEnabler {
+        public Security() {
+
+        }
+    }
+
     public static class Device extends BaseInstanceEnabler {
 
         public Device() {
             // notify new date each 5 second
-            Timer timer = new Timer();
+            final Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -127,7 +152,7 @@ public class LeshanClientExample {
         }
 
         @Override
-        public ValueResponse read(int resourceid) {
+        public ValueResponse read(final int resourceid) {
             System.out.println("Read on resource " + resourceid);
             switch (resourceid) {
             case 0:
@@ -166,13 +191,13 @@ public class LeshanClientExample {
         }
 
         @Override
-        public LwM2mResponse execute(int resourceid, byte[] params) {
+        public LwM2mResponse execute(final int resourceid, final byte[] params) {
             System.out.println("Execute on resource " + resourceid + " params " + params);
             return new LwM2mResponse(ResponseCode.CHANGED);
         }
 
         @Override
-        public LwM2mResponse write(int resourceid, LwM2mResource value) {
+        public LwM2mResponse write(final int resourceid, final LwM2mResource value) {
             System.out.println("Write on resource " + resourceid + " value " + value);
             switch (resourceid) {
             case 13:
@@ -226,7 +251,7 @@ public class LeshanClientExample {
             return utcOffset;
         }
 
-        private void setUtcOffset(String t) {
+        private void setUtcOffset(final String t) {
             utcOffset = t;
         }
 
@@ -236,7 +261,7 @@ public class LeshanClientExample {
             return timeZone;
         }
 
-        private void setTimezone(String t) {
+        private void setTimezone(final String t) {
             timeZone = t;
         }
 

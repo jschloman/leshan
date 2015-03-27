@@ -48,32 +48,32 @@ public class LwM2mBootstrapServerImpl implements LwM2mBootstrapServer {
 
     private final SecurityStore securityStore;
 
-    public LwM2mBootstrapServerImpl(BootstrapStore bsStore, SecurityStore securityStore) {
+    public LwM2mBootstrapServerImpl(final BootstrapStore bsStore, final SecurityStore securityStore) {
         this(new InetSocketAddress((InetAddress) null, PORT), new InetSocketAddress((InetAddress) null, PORT_DTLS),
                 bsStore, securityStore);
 
     }
 
-    public LwM2mBootstrapServerImpl(InetSocketAddress localAddress, InetSocketAddress localAddressSecure,
-            BootstrapStore bsStore, SecurityStore securityStore) {
+    public LwM2mBootstrapServerImpl(final InetSocketAddress localAddress, final InetSocketAddress localAddressSecure,
+            final BootstrapStore bsStore, final SecurityStore securityStore) {
         Validate.notNull(bsStore, "bootstrap store must not be null");
 
         this.bsStore = bsStore;
         this.securityStore = securityStore;
         // init CoAP server
         coapServer = new CoapServer();
-        Endpoint endpoint = new CoAPEndpoint(localAddress);
+        final Endpoint endpoint = new CoAPEndpoint(localAddress);
         coapServer.addEndpoint(endpoint);
 
         // init DTLS server
-        DTLSConnector connector = new DTLSConnector(localAddressSecure, null);
+        final DTLSConnector connector = new DTLSConnector(localAddressSecure, null);
         connector.getConfig().setPskStore(new LwM2mPskStore(this.securityStore));
 
-        Endpoint secureEndpoint = new SecureEndpoint(connector);
+        final Endpoint secureEndpoint = new SecureEndpoint(connector);
         coapServer.addEndpoint(secureEndpoint);
 
         // define /bs ressource
-        BootstrapResource bsResource = new BootstrapResource(bsStore);
+        final BootstrapResource bsResource = new BootstrapResource(bsStore);
         coapServer.add(bsResource);
     }
 
@@ -90,6 +90,7 @@ public class LwM2mBootstrapServerImpl implements LwM2mBootstrapServer {
     /**
      * Starts the server and binds it to the specified port.
      */
+    @Override
     public void start() {
         coapServer.start();
         LOG.info("LW-M2M server started");
@@ -98,6 +99,7 @@ public class LwM2mBootstrapServerImpl implements LwM2mBootstrapServer {
     /**
      * Stops the server and unbinds it from assigned ports (can be restarted).
      */
+    @Override
     public void stop() {
         coapServer.stop();
     }
@@ -107,5 +109,9 @@ public class LwM2mBootstrapServerImpl implements LwM2mBootstrapServer {
      */
     public void destroy() {
         coapServer.destroy();
+    }
+
+    public CoapServer getCoapServer() {
+        return coapServer;
     }
 }

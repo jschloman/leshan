@@ -46,13 +46,15 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
 
     private final Endpoint clientEndpoint;
     private final InetSocketAddress serverAddress;
+    private final InetSocketAddress bootstrapServerAddress;
     private final LinkObject[] clientObjectModel;
     private final long timeoutMillis;
 
-    public CaliforniumLwM2mClientRequestSender(final Endpoint endpoint, final InetSocketAddress serverAddress,
-            final LinkObject... linkObjects) {
+    public CaliforniumLwM2mClientRequestSender(final Endpoint endpoint, final InetSocketAddress bootstrapServerAddress,
+            final InetSocketAddress serverAddress, final LinkObject... linkObjects) {
         this.clientEndpoint = endpoint;
         this.serverAddress = serverAddress;
+        this.bootstrapServerAddress = bootstrapServerAddress;
         this.clientObjectModel = linkObjects;
         this.timeoutMillis = COAP_REQUEST_TIMEOUT_MILLIS;
     }
@@ -60,8 +62,8 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
     @Override
     public <T extends LwM2mResponse> T send(final UplinkRequest<T> request) {
         // Create the CoAP request from LwM2m request
-        final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress,
-                clientObjectModel);
+        final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(bootstrapServerAddress,
+                serverAddress, clientObjectModel);
         request.accept(coapClientRequestBuilder);
         // TODO manage invalid parameters
         // if (!coapClientRequestBuilder.areParametersValid()) {
@@ -94,8 +96,8 @@ public class CaliforniumLwM2mClientRequestSender implements LwM2mClientRequestSe
     public <T extends LwM2mResponse> void send(final UplinkRequest<T> request,
             final ResponseConsumer<T> responseCallback, final ExceptionConsumer errorCallback) {
         // Create the CoAP request from LwM2m request
-        final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(serverAddress,
-                clientObjectModel);
+        final CoapClientRequestBuilder coapClientRequestBuilder = new CoapClientRequestBuilder(bootstrapServerAddress,
+                serverAddress, clientObjectModel);
         request.accept(coapClientRequestBuilder);
         // TODO manage invalid parameters
         // if (!coapClientRequestBuilder.areParametersValid()) {

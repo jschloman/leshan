@@ -29,10 +29,10 @@ import org.eclipse.leshan.core.response.ValueResponse;
 
 public class SimpleInstanceEnabler extends BaseInstanceEnabler {
 
-    Map<Integer, LwM2mResource> resources = new HashMap<Integer, LwM2mResource>();
+    protected Map<Integer, LwM2mResource> resources = new HashMap<Integer, LwM2mResource>();
 
     @Override
-    public ValueResponse read(int resourceid) {
+    public ValueResponse read(final int resourceid) {
         if (resources.containsKey(resourceid)) {
             return new ValueResponse(ResponseCode.CONTENT, resources.get(resourceid));
         }
@@ -40,8 +40,8 @@ public class SimpleInstanceEnabler extends BaseInstanceEnabler {
     }
 
     @Override
-    public LwM2mResponse write(int resourceid, LwM2mResource value) {
-        LwM2mResource previousValue = resources.get(resourceid);
+    public LwM2mResponse write(final int resourceid, final LwM2mResource value) {
+        final LwM2mResource previousValue = resources.get(resourceid);
         resources.put(resourceid, value);
         if (!value.equals(previousValue))
             fireResourceChange(resourceid);
@@ -49,19 +49,19 @@ public class SimpleInstanceEnabler extends BaseInstanceEnabler {
     }
 
     @Override
-    public LwM2mResponse execute(int resourceid, byte[] params) {
+    public LwM2mResponse execute(final int resourceid, final byte[] params) {
         System.out.println("Execute on resource " + resourceid + " params " + params);
         return new LwM2mResponse(ResponseCode.CHANGED);
     }
 
     @Override
-    public void setObjectModel(ObjectModel objectModel) {
+    public void setObjectModel(final ObjectModel objectModel) {
         super.setObjectModel(objectModel);
 
         // initialize resources
-        for (ResourceModel resourceModel : objectModel.resources.values()) {
+        for (final ResourceModel resourceModel : objectModel.resources.values()) {
             if (resourceModel.operations.isReadable()) {
-                LwM2mResource newResource = createResource(objectModel, resourceModel);
+                final LwM2mResource newResource = createResource(objectModel, resourceModel);
                 if (newResource != null) {
                     resources.put(newResource.getId(), newResource);
                 }
@@ -69,7 +69,7 @@ public class SimpleInstanceEnabler extends BaseInstanceEnabler {
         }
     }
 
-    protected LwM2mResource createResource(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected LwM2mResource createResource(final ObjectModel objectModel, final ResourceModel resourceModel) {
         if (!resourceModel.multiple) {
             Value<?> value;
             switch (resourceModel.type) {
@@ -133,27 +133,27 @@ public class SimpleInstanceEnabler extends BaseInstanceEnabler {
         return null;
     }
 
-    protected Value<String> createDefaultStringValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<String> createDefaultStringValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newStringValue(resourceModel.name);
     }
 
-    protected Value<Integer> createDefaultIntegerValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<Integer> createDefaultIntegerValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newIntegerValue((int) (Math.random() * 100 % 101));
     }
 
-    protected Value<Boolean> createDefaultBooleanValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<Boolean> createDefaultBooleanValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newBooleanValue(Math.random() * 100 % 2 == 0);
     }
 
-    protected Value<?> createDefaultDateValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<?> createDefaultDateValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newDateValue(new Date());
     }
 
-    protected Value<?> createDefaultFloatValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<?> createDefaultFloatValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newFloatValue((float) Math.random() * 100);
     }
 
-    protected Value<?> createDefaultOpaqueValue(ObjectModel objectModel, ResourceModel resourceModel) {
+    protected Value<?> createDefaultOpaqueValue(final ObjectModel objectModel, final ResourceModel resourceModel) {
         return Value.newBinaryValue(new String("Default " + resourceModel.name).getBytes());
     }
 }

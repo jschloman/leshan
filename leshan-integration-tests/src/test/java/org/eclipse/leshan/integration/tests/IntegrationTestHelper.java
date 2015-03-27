@@ -52,9 +52,10 @@ public final class IntegrationTestHelper {
 
     LwM2mServer server;
     LwM2mClient client;
+    List<ObjectEnabler> clientObjects;
 
     private LwM2mBootstrapServerImpl bootstrapServer;
-    private boolean startBootstrap;
+    private final boolean startBootstrap;
 
     public IntegrationTestHelper() {
         this(false);
@@ -64,26 +65,30 @@ public final class IntegrationTestHelper {
         this.startBootstrap = startBootstrap;
     }
 
-    LwM2mClient createClient(final InetSocketAddress serverAddress) {
-        ObjectsInitializer initializer = new ObjectsInitializer();
-        List<ObjectEnabler> objects = initializer.create(2, 3);
-        return new LeshanClient(serverAddress, new ArrayList<LwM2mObjectEnabler>(objects));
+    LwM2mClient createClient(final InetSocketAddress bootstrapServerAddress, final InetSocketAddress serverAddress) {
+        final ObjectsInitializer initializer = new ObjectsInitializer();
+        initializer.setClassForObject(0, TestingInstanceEnabler.class);
+        initializer.setClassForObject(1, TestingInstanceEnabler.class);
+        clientObjects = initializer.create(0, 1, 2, 3);
+        return new LeshanClient(new InetSocketAddress("0", 0), bootstrapServerAddress, serverAddress,
+                new ArrayList<LwM2mObjectEnabler>(clientObjects));
     }
 
     public void start() {
         server = new LeshanServerBuilder().setLocalAddress(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0))
                 .setLocalAddressSecure(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0)).build();
 
+        server.start();
         if (startBootstrap) {
-            bootstrapServer = new LwM2mBootstrapServerImpl(new BootstrapStoreImpl(), new SecurityRegistryImpl());
+            bootstrapServer = new LwM2mBootstrapServerImpl(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
+                    new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), new BootstrapStoreImpl(),
+                    new SecurityRegistryImpl());
             bootstrapServer.start();
-            client = createClient(getServerSecureAddress());
-            client.start();
+            client = createClient(getBootstrapServerAddress(), getServerAddress());
         } else {
-            server.start();
-            client = createClient(getServerAddress());
-            client.start();
+            client = createClient(null, getServerAddress());
         }
+        client.start();
     }
 
     public void stop() {
@@ -98,8 +103,24 @@ public final class IntegrationTestHelper {
         return server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
     }
 
+    private InetSocketAddress getBootstrapServerSecureAddress() {
+        for (final Endpoint endpoint : bootstrapServer.getCoapServer().getEndpoints()) {
+            if (endpoint instanceof SecureEndpoint)
+                return endpoint.getAddress();
+        }
+        return null;
+    }
+
+    private InetSocketAddress getBootstrapServerAddress() {
+        for (final Endpoint endpoint : bootstrapServer.getCoapServer().getEndpoints()) {
+            if (!(endpoint instanceof SecureEndpoint))
+                return endpoint.getAddress();
+        }
+        return null;
+    }
+
     private InetSocketAddress getServerSecureAddress() {
-        for (Endpoint endpoint : ((LeshanServer) server).getCoapServer().getEndpoints()) {
+        for (final Endpoint endpoint : ((LeshanServer) server).getCoapServer().getEndpoints()) {
             if (endpoint instanceof SecureEndpoint)
                 return endpoint.getAddress();
         }
@@ -107,7 +128,7 @@ public final class IntegrationTestHelper {
     }
 
     private InetSocketAddress getServerAddress() {
-        for (Endpoint endpoint : ((LeshanServer) server).getCoapServer().getEndpoints()) {
+        for (final Endpoint endpoint : ((LeshanServer) server).getCoapServer().getEndpoints()) {
             if (!(endpoint instanceof SecureEndpoint))
                 return endpoint.getAddress();
         }

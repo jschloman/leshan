@@ -30,17 +30,24 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
 
     private Request coapRequest;
     private final InetSocketAddress serverAddress;
+    private final InetSocketAddress bootstrapServerAddress;
     private final LinkObject[] clientObjectModel;
 
-    public CoapClientRequestBuilder(final InetSocketAddress serverAddress, final LinkObject... clientObjectModel) {
+    public CoapClientRequestBuilder(final InetSocketAddress bootstrapServerAddress,
+            final InetSocketAddress serverAddress, final LinkObject... clientObjectModel) {
         this.serverAddress = serverAddress;
+        this.bootstrapServerAddress = bootstrapServerAddress;
         this.clientObjectModel = clientObjectModel;
     }
 
     @Override
     public void visit(final BootstrapRequest request) {
         coapRequest = Request.newPost();
-        buildRequestSettings();
+        if (bootstrapServerAddress != null) {
+            buildBootstrapRequestSettings();
+        } else {
+            buildRequestSettings();
+        }
         coapRequest.getOptions().addUriPath("bs");
         coapRequest.getOptions().addUriQuery("ep=" + request.getEndpointName());
     }
@@ -53,23 +60,23 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
         coapRequest.getOptions().addUriPath("rd");
         coapRequest.getOptions().addUriQuery("ep=" + request.getEndpointName());
 
-        Long lifetime = request.getLifetime();
+        final Long lifetime = request.getLifetime();
         if (lifetime != null)
             coapRequest.getOptions().addUriQuery("lt=" + lifetime);
 
-        String smsNumber = request.getSmsNumber();
+        final String smsNumber = request.getSmsNumber();
         if (smsNumber != null)
             coapRequest.getOptions().addUriQuery("sms=" + smsNumber);
 
-        String lwVersion = request.getLwVersion();
+        final String lwVersion = request.getLwVersion();
         if (lwVersion != null)
             coapRequest.getOptions().addUriQuery("lwm2m=" + lwVersion);
 
-        BindingMode bindingMode = request.getBindingMode();
+        final BindingMode bindingMode = request.getBindingMode();
         if (bindingMode != null)
             coapRequest.getOptions().addUriQuery("b=" + bindingMode.toString());
 
-        LinkObject[] linkObjects = request.getObjectLinks();
+        final LinkObject[] linkObjects = request.getObjectLinks();
         String payload;
         if (linkObjects == null)
             payload = LinkFormatUtils.payloadize(clientObjectModel);
@@ -84,19 +91,19 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
         buildRequestSettings();
         coapRequest.getOptions().setUriPath(request.getRegistrationId());
 
-        Long lifetime = request.getLifeTimeInSec();
+        final Long lifetime = request.getLifeTimeInSec();
         if (lifetime != null)
             coapRequest.getOptions().addUriQuery("lt=" + lifetime);
 
-        String smsNumber = request.getSmsNumber();
+        final String smsNumber = request.getSmsNumber();
         if (smsNumber != null)
             coapRequest.getOptions().addUriQuery("sms=" + smsNumber);
 
-        BindingMode bindingMode = request.getBindingMode();
+        final BindingMode bindingMode = request.getBindingMode();
         if (bindingMode != null)
             coapRequest.getOptions().addUriQuery("b=" + bindingMode.toString());
 
-        LinkObject[] linkObjects = request.getObjectLinks();
+        final LinkObject[] linkObjects = request.getObjectLinks();
         String payload;
         if (linkObjects == null)
             payload = LinkFormatUtils.payloadize(clientObjectModel);
@@ -114,6 +121,11 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
 
     public Request getRequest() {
         return coapRequest;
+    }
+
+    private void buildBootstrapRequestSettings() {
+        coapRequest.setDestination(bootstrapServerAddress.getAddress());
+        coapRequest.setDestinationPort(bootstrapServerAddress.getPort());
     }
 
     private void buildRequestSettings() {

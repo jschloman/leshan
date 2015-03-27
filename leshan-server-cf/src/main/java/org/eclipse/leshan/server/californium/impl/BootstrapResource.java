@@ -45,18 +45,18 @@ public class BootstrapResource extends CoapResource {
     private static final Logger LOG = LoggerFactory.getLogger(BootstrapResource.class);
     private static final String QUERY_PARAM_ENDPOINT = "ep=";
 
-    private BootstrapStore store;
+    private final BootstrapStore store;
 
-    private Executor e = Executors.newFixedThreadPool(5);
+    private final Executor e = Executors.newFixedThreadPool(5);
 
-    public BootstrapResource(BootstrapStore store) {
+    public BootstrapResource(final BootstrapStore store) {
         super("bs");
         this.store = store;
     }
 
     @Override
     public void handlePOST(final CoapExchange exchange) {
-        Request request = exchange.advanced().getRequest();
+        final Request request = exchange.advanced().getRequest();
         LOG.debug("POST received : {}", request);
         // The LW M2M spec (section 8.2) mandates the usage of Confirmable
         // messages
@@ -67,7 +67,7 @@ public class BootstrapResource extends CoapResource {
 
         // which endpoint?
         String endpointTmp = null;
-        for (String param : request.getOptions().getUriQuery()) {
+        for (final String param : request.getOptions().getUriQuery()) {
             if (param.startsWith(QUERY_PARAM_ENDPOINT)) {
                 endpointTmp = param.substring(QUERY_PARAM_ENDPOINT.length());
                 break;
@@ -98,7 +98,7 @@ public class BootstrapResource extends CoapResource {
                 // first delete everything
 
                 final Endpoint e = exchange.advanced().getEndpoint();
-                Request deleteAll = Request.newDelete();
+                final Request deleteAll = Request.newDelete();
                 deleteAll.setConfirmable(true);
                 deleteAll.setDestination(exchange.getSourceAddress());
                 deleteAll.setDestinationPort(exchange.getSourcePort());
@@ -116,20 +116,20 @@ public class BootstrapResource extends CoapResource {
                     }
 
                     @Override
-                    public void onResponse(Response response) {
-                        LOG.debug("Bootstrap delete {} return code {}", endpoint, response.getCode());
-                        List<Integer> toSend = new ArrayList<>(cfg.security.keySet());
+                    public void onResponse(final Response response) {
+                        LOG.error("Bootstrap delete {} return code {}", endpoint, response.getCode());
+                        final List<Integer> toSend = new ArrayList<>(cfg.security.keySet());
                         sendBootstrap(e, endpoint, exchange.getSourceAddress(), exchange.getSourcePort(), cfg, toSend);
                     }
 
                     @Override
                     public void onReject() {
-                        LOG.debug("Bootstrap delete {} reject", endpoint);
+                        LOG.error("Bootstrap delete {} reject", endpoint);
                     }
 
                     @Override
                     public void onCancel() {
-                        LOG.debug("Bootstrap delete {} cancel", endpoint);
+                        LOG.error("Bootstrap delete {} cancel", endpoint);
                     }
 
                     @Override
@@ -146,13 +146,13 @@ public class BootstrapResource extends CoapResource {
 
         if (!toSend.isEmpty()) {
             // 1st encode them into a juicy TLV binary
-            Integer key = toSend.remove(0);
+            final Integer key = toSend.remove(0);
 
-            Tlv[] secuResources = tlvEncode(cfg.security.get(key));
+            final Tlv[] secuResources = tlvEncode(cfg.security.get(key));
 
-            ByteBuffer encoded = TlvEncoder.encode(secuResources);
+            final ByteBuffer encoded = TlvEncoder.encode(secuResources);
             // now send security
-            Request postSecurity = Request.newPut();
+            final Request postSecurity = Request.newPut();
             postSecurity.getOptions().addUriPath("0");
             postSecurity.getOptions().addUriPath(key.toString());
             postSecurity.setConfirmable(true);
@@ -173,20 +173,20 @@ public class BootstrapResource extends CoapResource {
                 }
 
                 @Override
-                public void onResponse(Response response) {
-                    LOG.debug("Bootstrap security {} return code {}", endpoint, response.getCode());
+                public void onResponse(final Response response) {
+                    LOG.error("Bootstrap security {} return code {}", endpoint, response.getCode());
                     // recursive call until toSend is empty
                     sendBootstrap(e, endpoint, targetAddress, targetPort, cfg, toSend);
                 }
 
                 @Override
                 public void onReject() {
-                    LOG.debug("Bootstrap security {} reject", endpoint);
+                    LOG.error("Bootstrap security {} reject", endpoint);
                 }
 
                 @Override
                 public void onCancel() {
-                    LOG.debug("Bootstrap security {} cancel", endpoint);
+                    LOG.error("Bootstrap security {} cancel", endpoint);
                 }
 
                 @Override
@@ -197,7 +197,7 @@ public class BootstrapResource extends CoapResource {
 
         } else {
             // we are done, send the servers
-            List<Integer> serversToSend = new ArrayList<>(cfg.servers.keySet());
+            final List<Integer> serversToSend = new ArrayList<>(cfg.servers.keySet());
             sendServers(e, endpoint, targetAddress, targetPort, cfg, serversToSend);
         }
     }
@@ -207,13 +207,13 @@ public class BootstrapResource extends CoapResource {
 
         if (!toSend.isEmpty()) {
             // 1st encode them into a juicy TLV binary
-            Integer key = toSend.remove(0);
+            final Integer key = toSend.remove(0);
 
-            Tlv[] serverResources = tlvEncode(cfg.servers.get(key));
-            ByteBuffer encoded = TlvEncoder.encode(serverResources);
+            final Tlv[] serverResources = tlvEncode(cfg.servers.get(key));
+            final ByteBuffer encoded = TlvEncoder.encode(serverResources);
 
             // now send server
-            Request postServer = Request.newPut();
+            final Request postServer = Request.newPut();
             postServer.getOptions().addUriPath("1");
             postServer.getOptions().addUriPath(key.toString());
             postServer.setConfirmable(true);
@@ -232,15 +232,15 @@ public class BootstrapResource extends CoapResource {
                 }
 
                 @Override
-                public void onResponse(Response response) {
-                    LOG.debug("Bootstrap servers {} return code {}", endpoint, response.getCode());
+                public void onResponse(final Response response) {
+                    LOG.error("Bootstrap servers {} return code {}", endpoint, response.getCode());
                     // recursive call until toSend is empty
                     sendServers(e, endpoint, targetAddress, targetPort, cfg, toSend);
                 }
 
                 @Override
                 public void onReject() {
-                    LOG.debug("Bootstrap servers {} reject", endpoint);
+                    LOG.error("Bootstrap servers {} reject", endpoint);
                 }
 
                 @Override
@@ -256,12 +256,12 @@ public class BootstrapResource extends CoapResource {
 
         } else {
             // done
-            LOG.debug("Bootstrap session done for endpoint {}", endpoint);
+            LOG.error("Bootstrap session done for endpoint {}", endpoint);
         }
     }
 
-    private Tlv[] tlvEncode(ServerSecurity value) {
-        Tlv[] resources = new Tlv[12];
+    private Tlv[] tlvEncode(final ServerSecurity value) {
+        final Tlv[] resources = new Tlv[12];
         resources[0] = new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeString(value.uri), 0);
         resources[1] = new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeBoolean(value.bootstrapServer), 1);
         resources[2] = new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeInteger(value.securityMode.code), 2);
@@ -277,8 +277,8 @@ public class BootstrapResource extends CoapResource {
         return resources;
     }
 
-    private Tlv[] tlvEncode(ServerConfig value) {
-        List<Tlv> resources = new ArrayList<Tlv>();
+    private Tlv[] tlvEncode(final ServerConfig value) {
+        final List<Tlv> resources = new ArrayList<Tlv>();
         resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeInteger(value.shortId), 0));
         resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeInteger(value.lifetime), 1));
         resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeInteger(value.defaultMinPeriod), 2));
@@ -288,7 +288,7 @@ public class BootstrapResource extends CoapResource {
         if (value.disableTimeout != null) {
             resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeInteger(value.disableTimeout), 5));
         }
-        resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeBoolean(value.notifIfDisabled), 6));
+        resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeBoolean(value.notifyIfDisabled), 6));
         resources.add(new Tlv(TlvType.RESOURCE_VALUE, null, TlvEncoder.encodeString(value.binding.name()), 7));
 
         return resources.toArray(new Tlv[] {});

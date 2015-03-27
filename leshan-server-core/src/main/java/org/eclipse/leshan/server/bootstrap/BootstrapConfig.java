@@ -15,42 +15,67 @@
  *******************************************************************************/
 package org.eclipse.leshan.server.bootstrap;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.leshan.core.request.BindingMode;
 
 /**
  * A client configuration to be pushed by a bootstrap operation
  */
-public class BootstrapConfig {
+public class BootstrapConfig implements Serializable {
 
     public Map<Integer, ServerConfig> servers = new HashMap<>();
 
     public Map<Integer, ServerSecurity> security = new HashMap<>();
 
     /** server configuration (object 1) */
-    static public class ServerConfig {
+    static public class ServerConfig implements Serializable {
         public int shortId;
         public int lifetime = 86400;
         public int defaultMinPeriod = 1;
         public Integer defaultMaxPeriod = null;
         public Integer disableTimeout = null;
-        public boolean notifIfDisabled = true;
+        public boolean notifyIfDisabled = true;
         public BindingMode binding = BindingMode.U;
 
         @Override
         public String toString() {
             return String
-                    .format("ServerConfig [shortId=%s, lifetime=%s, defaultMinPeriod=%s, defaultMaxPeriod=%s, disableTimeout=%s, notifIfDisabled=%s, binding=%s]",
-                            shortId, lifetime, defaultMinPeriod, defaultMaxPeriod, disableTimeout, notifIfDisabled,
+                    .format("ServerConfig [shortId=%s, lifetime=%s, defaultMinPeriod=%s, defaultMaxPeriod=%s, disableTimeout=%s, notifyIfDisabled=%s, binding=%s]",
+                            shortId, lifetime, defaultMinPeriod, defaultMaxPeriod, disableTimeout, notifyIfDisabled,
                             binding);
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final ServerConfig other = (ServerConfig) obj;
+            return Objects.equals(this.shortId, other.shortId) && Objects.equals(this.lifetime, other.lifetime)
+                    && Objects.equals(this.defaultMinPeriod, other.defaultMinPeriod)
+                    && Objects.equals(this.defaultMaxPeriod, other.defaultMaxPeriod)
+                    && Objects.equals(this.disableTimeout, other.disableTimeout)
+                    && Objects.equals(this.notifyIfDisabled, other.notifyIfDisabled)
+                    && Objects.equals(this.binding, other.binding);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(shortId, lifetime, defaultMinPeriod, defaultMaxPeriod, disableTimeout,
+                    notifyIfDisabled, binding);
         }
     }
 
     /** security configuration (object 0) */
-    static public class ServerSecurity {
+    static public class ServerSecurity implements Serializable {
         public String uri;
         public boolean bootstrapServer = false;
         public SecurityMode securityMode;
@@ -72,6 +97,34 @@ public class BootstrapConfig {
                             Arrays.toString(serverPublicKeyOrId), Arrays.toString(secretKey), smsSecurityMode,
                             Arrays.toString(smsBindingKeyParam), Arrays.toString(smsBindingKeySecret), serverSmsNumber,
                             serverId, clientOldOffTime);
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final ServerSecurity other = (ServerSecurity) obj;
+            return Objects.equals(this.uri, other.uri) && Objects.equals(this.bootstrapServer, other.bootstrapServer)
+                    && Objects.equals(this.securityMode, other.securityMode)
+                    && Arrays.equals(this.publicKeyOrId, other.publicKeyOrId)
+                    && Arrays.equals(this.serverPublicKeyOrId, other.serverPublicKeyOrId)
+                    && Arrays.equals(this.secretKey, other.secretKey)
+                    && Objects.equals(this.smsSecurityMode, other.smsSecurityMode)
+                    && Arrays.equals(this.smsBindingKeyParam, other.smsBindingKeyParam)
+                    && Arrays.equals(this.smsBindingKeySecret, other.smsBindingKeySecret)
+                    && Objects.equals(this.serverSmsNumber, other.serverSmsNumber)
+                    && Objects.equals(this.serverId, other.serverId)
+                    && Objects.equals(this.clientOldOffTime, other.clientOldOffTime);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(uri, securityMode, publicKeyOrId, serverPublicKeyOrId, secretKey, smsSecurityMode,
+                    smsBindingKeyParam, smsBindingKeySecret, serverSmsNumber, serverId, clientOldOffTime);
         }
     }
 

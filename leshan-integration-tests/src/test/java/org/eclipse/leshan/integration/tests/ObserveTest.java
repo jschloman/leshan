@@ -41,7 +41,7 @@ import org.junit.Test;
 
 public class ObserveTest {
 
-    private IntegrationTestHelper helper = new IntegrationTestHelper();
+    private final IntegrationTestHelper helper = new IntegrationTestHelper();
 
     @Before
     public void start() {
@@ -58,17 +58,17 @@ public class ObserveTest {
         // client registration
         helper.client.send(new RegisterRequest(ENDPOINT_IDENTIFIER));
 
-        TestObservationListener listener = new TestObservationListener();
+        final TestObservationListener listener = new TestObservationListener();
         helper.server.getObservationRegistry().addListener(listener);
 
-        // observe devive timezone
-        ValueResponse response = helper.server.send(helper.getClient(), new ObserveRequest(3, 0, 15));
+        // observe derive timezone
+        final ValueResponse response = helper.server.send(helper.getClient(), new ObserveRequest(3, 0, 15));
         assertEquals(ResponseCode.CONTENT, response.getCode());
 
         // write device timezone
-        LwM2mResource newValue = new LwM2mResource(15, Value.newStringValue("Europe/Paris"));
-        LwM2mResponse writeResponse = helper.server.send(helper.getClient(), new WriteRequest(3, 0, 15, newValue, null,
-                true));
+        final LwM2mResource newValue = new LwM2mResource(15, Value.newStringValue("Europe/Paris"));
+        final LwM2mResponse writeResponse = helper.server.send(helper.getClient(), new WriteRequest(3, 0, 15, newValue,
+                null, true));
 
         // verify result
         listener.waitForNotification(2000);
@@ -107,7 +107,7 @@ public class ObserveTest {
             return content;
         }
 
-        public void waitForNotification(long timeout) throws InterruptedException {
+        public void waitForNotification(final long timeout) throws InterruptedException {
             latch.await(timeout, TimeUnit.MILLISECONDS);
         }
     }

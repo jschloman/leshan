@@ -24,6 +24,7 @@ import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.Validate;
@@ -52,21 +53,21 @@ public class BootstrapStoreImpl implements BootstrapStore {
     /**
      * @param file the file path to persist the registry
      */
-    public BootstrapStoreImpl(String filename) {
+    public BootstrapStoreImpl(final String filename) {
         Validate.notEmpty(filename);
 
         this.filename = filename;
         this.loadFromFile();
     }
 
-    private Map<String, BootstrapConfig> bootstrapByEndpoint = new ConcurrentHashMap<>();
+    private final Map<String, BootstrapConfig> bootstrapByEndpoint = new ConcurrentHashMap<>();
 
     @Override
-    public BootstrapConfig getBootstrap(String endpoint) {
+    public BootstrapConfig getBootstrap(final String endpoint) {
         return bootstrapByEndpoint.get(endpoint);
     }
 
-    public void addConfig(String endpoint, BootstrapConfig config) throws ConfigurationException {
+    public void addConfig(final String endpoint, final BootstrapConfig config) throws ConfigurationException {
         ConfigurationChecker.verify(config);
         // check the configuration
         bootstrapByEndpoint.put(endpoint, config);
@@ -79,8 +80,8 @@ public class BootstrapStoreImpl implements BootstrapStore {
         return Collections.unmodifiableMap(bootstrapByEndpoint);
     }
 
-    public boolean deleteConfig(String enpoint) {
-        BootstrapConfig res = bootstrapByEndpoint.remove(enpoint);
+    public boolean deleteConfig(final String enpoint) {
+        final BootstrapConfig res = bootstrapByEndpoint.remove(enpoint);
         saveToFile();
         return res != null;
     }
@@ -89,13 +90,12 @@ public class BootstrapStoreImpl implements BootstrapStore {
 
     @SuppressWarnings("unchecked")
     private void loadFromFile() {
-
         try {
-            File file = new File(filename);
+            final File file = new File(filename);
 
             if (!file.exists()) {
                 // create parents if needed
-                File parent = file.getParentFile();
+                final File parent = file.getParentFile();
                 if (parent != null) {
                     parent.mkdirs();
                 }
@@ -105,21 +105,29 @@ public class BootstrapStoreImpl implements BootstrapStore {
 
                 try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
                     bootstrapByEndpoint.putAll((Map<String, BootstrapConfig>) in.readObject());
+                    LOG.error("Size of our store " + bootstrapByEndpoint.size());
+
+                    for (final Entry<String, BootstrapConfig> e : bootstrapByEndpoint.entrySet()) {
+                        LOG.error("Have key for '" + e.getKey() + "'");
+
+                    }
                 }
             }
-        } catch (FileNotFoundException e) {
+        } catch (final FileNotFoundException e) {
+            LOG.error("File not found?");
             // fine
-        } catch (Exception e) {
-            LOG.debug("Could not load bootstrap infos from file", e);
+        } catch (final Exception e) {
+            LOG.error("Could not load bootstrap infos from file", e);
         }
     }
 
     private void saveToFile() {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
-            Map<String, BootstrapConfig> copy = new HashMap<>(bootstrapByEndpoint);
+            final Map<String, BootstrapConfig> copy = new HashMap<>(bootstrapByEndpoint);
             out.writeObject(copy);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             LOG.debug("Could not save bootstrap infos to file", e);
         }
     }
+
 }

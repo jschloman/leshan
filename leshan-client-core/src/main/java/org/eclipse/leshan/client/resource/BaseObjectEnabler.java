@@ -15,6 +15,9 @@
  *******************************************************************************/
 package org.eclipse.leshan.client.resource;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.core.model.ObjectModel;
 import org.eclipse.leshan.core.model.ResourceModel;
@@ -31,14 +34,18 @@ import org.eclipse.leshan.core.response.CreateResponse;
 import org.eclipse.leshan.core.response.DiscoverResponse;
 import org.eclipse.leshan.core.response.LwM2mResponse;
 import org.eclipse.leshan.core.response.ValueResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BaseObjectEnabler implements LwM2mObjectEnabler {
+    private static final Logger LOG = LoggerFactory.getLogger(BaseObjectEnabler.class);
 
     int id;
     private NotifySender notifySender;
-    private ObjectModel objectModel;
+    private final ObjectModel objectModel;
+    final List<InstanceChangedListener> listeners = new ArrayList<InstanceChangedListener>();
 
-    public BaseObjectEnabler(int id, ObjectModel objectModel) {
+    public BaseObjectEnabler(final int id, final ObjectModel objectModel) {
         this.id = id;
         this.objectModel = objectModel;
     }
@@ -54,7 +61,7 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
     }
 
     @Override
-    public final CreateResponse create(CreateRequest request) {
+    public final CreateResponse create(final CreateRequest request) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return new CreateResponse(ResponseCode.METHOD_NOT_ALLOWED);
@@ -65,17 +72,17 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         return doCreate(request);
     }
 
-    protected CreateResponse doCreate(CreateRequest request) {
+    protected CreateResponse doCreate(final CreateRequest request) {
         return new CreateResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public final ValueResponse read(ReadRequest request) {
-        LwM2mPath path = request.getPath();
+    public final ValueResponse read(final ReadRequest request) {
+        final LwM2mPath path = request.getPath();
 
         // check if the resource is readable
         if (path.isResource()) {
-            ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
+            final ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
             if (resourceModel != null && !resourceModel.operations.isReadable()) {
                 return new ValueResponse(ResponseCode.METHOD_NOT_ALLOWED);
             }
@@ -86,17 +93,18 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         // TODO we could do a validation of response.getContent by comparing with the spec.
     }
 
-    protected ValueResponse doRead(ReadRequest request) {
+    protected ValueResponse doRead(final ReadRequest request) {
         return new ValueResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public final LwM2mResponse write(WriteRequest request) {
-        LwM2mPath path = request.getPath();
+    public final LwM2mResponse write(final WriteRequest request) {
+        final LwM2mPath path = request.getPath();
+        LOG.debug("Writing to " + path);
 
         // check if the resource is writable
         if (path.isResource()) {
-            ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
+            final ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
             if (resourceModel != null && !resourceModel.operations.isWritable()) {
                 return new LwM2mResponse(ResponseCode.METHOD_NOT_ALLOWED);
             }
@@ -107,12 +115,12 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         return doWrite(request);
     }
 
-    protected LwM2mResponse doWrite(WriteRequest request) {
+    protected LwM2mResponse doWrite(final WriteRequest request) {
         return new LwM2mResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public final LwM2mResponse delete(DeleteRequest request) {
+    public final LwM2mResponse delete(final DeleteRequest request) {
         // we can not create new instance on single object
         if (objectModel != null && !objectModel.multiple) {
             return new CreateResponse(ResponseCode.METHOD_NOT_ALLOWED);
@@ -121,13 +129,13 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         return doDelete(request);
     }
 
-    protected LwM2mResponse doDelete(DeleteRequest request) {
+    protected LwM2mResponse doDelete(final DeleteRequest request) {
         return new LwM2mResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public final LwM2mResponse execute(ExecuteRequest request) {
-        LwM2mPath path = request.getPath();
+    public final LwM2mResponse execute(final ExecuteRequest request) {
+        final LwM2mPath path = request.getPath();
 
         // only resource could be executed
         if (!path.isResource()) {
@@ -135,7 +143,7 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         }
 
         // check if the resource is writable
-        ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
+        final ResourceModel resourceModel = objectModel.resources.get(path.getResourceId());
         if (resourceModel != null && !resourceModel.operations.isExecutable()) {
             return new LwM2mResponse(ResponseCode.METHOD_NOT_ALLOWED);
         }
@@ -143,33 +151,47 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
         return doExecute(request);
     }
 
-    protected LwM2mResponse doExecute(ExecuteRequest request) {
+    protected LwM2mResponse doExecute(final ExecuteRequest request) {
         return new LwM2mResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public LwM2mResponse writeAttributes(WriteAttributesRequest request) {
+    public LwM2mResponse writeAttributes(final WriteAttributesRequest request) {
         // TODO should be implemented here to be available for all object enabler
         return new LwM2mResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public DiscoverResponse discover(DiscoverRequest request) {
+    public DiscoverResponse discover(final DiscoverRequest request) {
         // TODO should be implemented here to be available for all object enabler
         return new DiscoverResponse(ResponseCode.BAD_REQUEST);
     }
 
     @Override
-    public ValueResponse observe(ObserveRequest request) {
+    public ValueResponse observe(final ObserveRequest request) {
         return this.read(new ReadRequest(request.getPath().toString()));
     }
 
     @Override
-    public void setNotifySender(NotifySender sender) {
+    public void setNotifySender(final NotifySender sender) {
         notifySender = sender;
     }
 
     public NotifySender getNotifySender() {
         return notifySender;
+    }
+
+    public void addInstanceListener(final InstanceChangedListener listener) {
+        listeners.add(listener);
+    }
+
+    public boolean removeInstanceListener(final InstanceChangedListener listener) {
+        return listeners.remove(listener);
+    }
+
+    public void fireInstanceChange(final LwM2mPath lwM2mPath, final ResponseCode code) {
+        for (final InstanceChangedListener listener : listeners) {
+            listener.instanceChanged(lwM2mPath, code);
+        }
     }
 }
