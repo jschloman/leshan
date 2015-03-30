@@ -70,7 +70,7 @@ public class BootstrapTest {
 
     private static String STORED_ENDPOINT_IDENTIFIER = "SampleEndpointId";
 
-    private final IntegrationTestHelper helper = new IntegrationTestHelper(true);
+    private final IntegrationTestHelper helper = new IntegrationTestHelper();
 
     static {
         LogManager.getLogManager().reset();
@@ -94,12 +94,19 @@ public class BootstrapTest {
 
     @Before
     public void start() {
-        helper.start();
+        helper.createServer();
+        helper.server.start();
+        helper.createBootstrapServer();
+        helper.bootstrapServer.start();
+        helper.createClient();
+        helper.client.start();
     }
 
     @After
     public void stop() {
-        helper.stop();
+        helper.bootstrapServer.stop();
+        helper.server.stop();
+        helper.client.stop();
     }
 
     // TODO this works but I want to ignore its output for now.

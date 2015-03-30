@@ -18,7 +18,9 @@ package org.eclipse.leshan.client.resource;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.leshan.LinkObject;
 import org.eclipse.leshan.ResponseCode;
+import org.eclipse.leshan.client.util.LinkFormatHelper;
 import org.eclipse.leshan.core.model.ObjectModel;
 import org.eclipse.leshan.core.model.ResourceModel;
 import org.eclipse.leshan.core.node.LwM2mPath;
@@ -34,11 +36,8 @@ import org.eclipse.leshan.core.response.CreateResponse;
 import org.eclipse.leshan.core.response.DiscoverResponse;
 import org.eclipse.leshan.core.response.LwM2mResponse;
 import org.eclipse.leshan.core.response.ValueResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class BaseObjectEnabler implements LwM2mObjectEnabler {
-    private static final Logger LOG = LoggerFactory.getLogger(BaseObjectEnabler.class);
+public abstract class BaseObjectEnabler implements LwM2mObjectEnabler {
 
     int id;
     private NotifySender notifySender;
@@ -100,7 +99,6 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
     @Override
     public final LwM2mResponse write(final WriteRequest request) {
         final LwM2mPath path = request.getPath();
-        LOG.debug("Writing to " + path);
 
         // check if the resource is writable
         if (path.isResource()) {
@@ -163,7 +161,36 @@ public class BaseObjectEnabler implements LwM2mObjectEnabler {
 
     @Override
     public DiscoverResponse discover(final DiscoverRequest request) {
-        // TODO should be implemented here to be available for all object enabler
+        final LwM2mPath path = request.getPath();
+        if (path.isObject()) {
+
+            // Manage discover on object
+            final LinkObject[] linkObjects = LinkFormatHelper.getObjectDescription(getObjectModel(), null);
+            return new DiscoverResponse(ResponseCode.CONTENT, linkObjects);
+
+        } else if (path.isObjectInstance()) {
+
+            // Manage discover on instance
+            if (!getAvailableInstance().contains(path.getObjectInstanceId()))
+                return new DiscoverResponse(ResponseCode.NOT_FOUND);
+
+            final LinkObject linkObject = LinkFormatHelper.getInstanceDescription(getObjectModel(),
+                    path.getObjectInstanceId(), null);
+            return new DiscoverResponse(ResponseCode.CONTENT, new LinkObject[] { linkObject });
+
+        } else if (path.isResource()) {
+            // Manage discover on resource
+            if (!getAvailableInstance().contains(path.getObjectInstanceId()))
+                return new DiscoverResponse(ResponseCode.NOT_FOUND);
+
+            final ResourceModel resourceModel = getObjectModel().resources.get(path.getResourceId());
+            if (resourceModel == null)
+                return new DiscoverResponse(ResponseCode.NOT_FOUND);
+
+            final LinkObject linkObject = LinkFormatHelper.getResourceDescription(getObjectModel().id,
+                    path.getObjectInstanceId(), resourceModel, null);
+            return new DiscoverResponse(ResponseCode.CONTENT, new LinkObject[] { linkObject });
+        }
         return new DiscoverResponse(ResponseCode.BAD_REQUEST);
     }
 

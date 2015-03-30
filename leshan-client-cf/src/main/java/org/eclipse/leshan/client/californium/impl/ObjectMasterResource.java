@@ -30,7 +30,7 @@ public class ObjectMasterResource extends CoapResource implements LinkFormattabl
         setObservable(true);
 
         serverResources = new HashMap<>();
-        serverResources.put(managementAddress.getAddress(), new ObjectManagementResource(nodeEnabler));
+        serverResources.put(managementAddress.getAddress(), new ObjectResource(nodeEnabler));
 
         if (!managementAddress.equals(bootstrapAddress) && bootstrapAddress != null) {
             serverResources.put(bootstrapAddress.getAddress(), new ObjectBootstrapResource(nodeEnabler));

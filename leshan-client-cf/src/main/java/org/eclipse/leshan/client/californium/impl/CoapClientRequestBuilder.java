@@ -19,6 +19,8 @@ import java.net.InetSocketAddress;
 
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.leshan.LinkObject;
+import org.eclipse.leshan.client.LwM2mClient;
+import org.eclipse.leshan.client.util.LinkFormatHelper;
 import org.eclipse.leshan.core.request.BindingMode;
 import org.eclipse.leshan.core.request.BootstrapRequest;
 import org.eclipse.leshan.core.request.DeregisterRequest;
@@ -31,13 +33,13 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
     private Request coapRequest;
     private final InetSocketAddress serverAddress;
     private final InetSocketAddress bootstrapServerAddress;
-    private final LinkObject[] clientObjectModel;
+    private final LwM2mClient client;
 
     public CoapClientRequestBuilder(final InetSocketAddress bootstrapServerAddress,
-            final InetSocketAddress serverAddress, final LinkObject... clientObjectModel) {
-        this.serverAddress = serverAddress;
+            final InetSocketAddress serverAddress, final LwM2mClient client) {
         this.bootstrapServerAddress = bootstrapServerAddress;
-        this.clientObjectModel = clientObjectModel;
+        this.serverAddress = serverAddress;
+        this.client = client;
     }
 
     @Override
@@ -79,9 +81,9 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
         final LinkObject[] linkObjects = request.getObjectLinks();
         String payload;
         if (linkObjects == null)
-            payload = LinkFormatUtils.payloadize(clientObjectModel);
+            payload = LinkObject.serialyse(LinkFormatHelper.getClientDescription(client.getObjectEnablers(), null));
         else
-            payload = LinkFormatUtils.payloadize(linkObjects);
+            payload = LinkObject.serialyse(linkObjects);
         coapRequest.setPayload(payload);
     }
 
@@ -104,12 +106,8 @@ public class CoapClientRequestBuilder implements UplinkRequestVisitor {
             coapRequest.getOptions().addUriQuery("b=" + bindingMode.toString());
 
         final LinkObject[] linkObjects = request.getObjectLinks();
-        String payload;
         if (linkObjects == null)
-            payload = LinkFormatUtils.payloadize(clientObjectModel);
-        else
-            payload = LinkFormatUtils.payloadize(linkObjects);
-        coapRequest.setPayload(payload);
+            coapRequest.setPayload(LinkObject.serialyse(linkObjects));
     }
 
     @Override

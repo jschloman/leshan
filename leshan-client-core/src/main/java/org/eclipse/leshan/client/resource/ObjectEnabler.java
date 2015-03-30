@@ -56,6 +56,13 @@ public class ObjectEnabler extends BaseObjectEnabler {
     }
 
     @Override
+    public List<Integer> getAvailableInstance() {
+        final List<Integer> ids = new ArrayList<Integer>(instances.keySet());
+        Collections.sort(ids);
+        return ids;
+    }
+
+    @Override
     protected CreateResponse doCreate(final CreateRequest request) {
         try {
             // TODO manage case where instanceid is not available

@@ -17,6 +17,7 @@
 package org.eclipse.leshan.integration.tests;
 
 import static org.eclipse.leshan.integration.tests.IntegrationTestHelper.ENDPOINT_IDENTIFIER;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -24,11 +25,14 @@ import static org.junit.Assert.assertTrue;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 
+import org.eclipse.leshan.LinkObject;
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.client.californium.LeshanClient;
-import org.eclipse.leshan.client.resource.BaseObjectEnabler;
+import org.eclipse.leshan.client.resource.LwM2mInstanceEnabler;
 import org.eclipse.leshan.client.resource.LwM2mObjectEnabler;
+import org.eclipse.leshan.client.resource.ObjectEnabler;
 import org.eclipse.leshan.core.request.DeregisterRequest;
 import org.eclipse.leshan.core.request.RegisterRequest;
 import org.eclipse.leshan.core.request.UpdateRequest;
@@ -37,7 +41,6 @@ import org.eclipse.leshan.core.response.RegisterResponse;
 import org.eclipse.leshan.server.client.Client;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class RegistrationTest {
@@ -46,16 +49,19 @@ public class RegistrationTest {
 
     @Before
     public void start() {
-        helper.start();
+        helper.createServer();
+        helper.server.start();
+        helper.createClient();
+        helper.client.start();
     }
 
     @After
     public void stop() {
-        helper.stop();
+        helper.client.stop();
+        helper.server.stop();
     }
 
     // TODO we must fix the API of registered response
-    @Ignore
     @Test
     public void registered_device_exists() {
         // check there are no client registered
@@ -65,10 +71,12 @@ public class RegistrationTest {
         RegisterResponse response = helper.client.send(new RegisterRequest(ENDPOINT_IDENTIFIER));
 
         // verify result
-        assertTrue(response.getCode() == ResponseCode.CREATED);
+        assertEquals(ResponseCode.CREATED, response.getCode());
         assertEquals(1, helper.server.getClientRegistry().allClients().size());
-        assertEquals(response.getRegistrationID(), helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER)
-                .getRegistrationId());
+        Client client = helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
+        // TODO we must fix the API of registered response
+        // assertEquals(response.getRegistrationID(), client.getRegistrationId());
+        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</2>,</3/0>".getBytes()), client.getObjectLinks());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -78,16 +86,14 @@ public class RegistrationTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void fail_to_create_client_with_same_object_twice() {
-        BaseObjectEnabler baseObjectEnabler = new BaseObjectEnabler(1, null);
-        BaseObjectEnabler baseObjectEnabler2 = new BaseObjectEnabler(1, null);
+        ObjectEnabler objectEnabler = new ObjectEnabler(1, null, new HashMap<Integer, LwM2mInstanceEnabler>(), null);
+        ObjectEnabler objectEnabler2 = new ObjectEnabler(1, null, new HashMap<Integer, LwM2mInstanceEnabler>(), null);
         ArrayList<LwM2mObjectEnabler> objects = new ArrayList<>();
-        objects.add(baseObjectEnabler);
-        objects.add(baseObjectEnabler2);
+        objects.add(objectEnabler);
+        objects.add(objectEnabler2);
         helper.client = new LeshanClient(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), objects);
     }
 
-    // TODO we must fix the API of registered response
-    @Ignore
     @Test
     public void registered_device_exists_async() throws InterruptedException {
         final ResponseCallback<RegisterResponse> callback = new ResponseCallback<>();
@@ -99,10 +105,12 @@ public class RegistrationTest {
         callback.waitForResponse(2000);
         assertTrue(callback.isCalled().get());
         RegisterResponse response = callback.getResponse();
-        assertTrue(response.getCode() == ResponseCode.CREATED);
+        assertEquals(ResponseCode.CREATED, response.getCode());
         assertEquals(1, helper.server.getClientRegistry().allClients().size());
-        assertEquals(response.getRegistrationID(), helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER)
-                .getRegistrationId());
+        Client client = helper.server.getClientRegistry().get(ENDPOINT_IDENTIFIER);
+        // TODO we must fix the API of registered response
+        // assertEquals(response.getRegistrationID(), client.getRegistrationId());
+        assertArrayEquals(LinkObject.parse("</>;rt=\"oma.lwm2m\",</2>,</3/0>".getBytes()), client.getObjectLinks());
     }
 
     @Test(expected = RuntimeException.class)
