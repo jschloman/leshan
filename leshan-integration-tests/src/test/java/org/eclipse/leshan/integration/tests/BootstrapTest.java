@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
 
 import org.eclipse.leshan.ResponseCode;
 import org.eclipse.leshan.bootstrap.BootstrapStoreImpl;
@@ -56,6 +58,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.jayway.awaitility.Duration;
 
@@ -67,6 +71,26 @@ public class BootstrapTest {
     private static String STORED_ENDPOINT_IDENTIFIER = "SampleEndpointId";
 
     private final IntegrationTestHelper helper = new IntegrationTestHelper(true);
+
+    static {
+        LogManager.getLogManager().reset();
+        SLF4JBridgeHandler.install();
+        // map slf4j to jul
+        final org.slf4j.Logger slf4jLogger = LoggerFactory.getLogger("org.eclipse.californium.scandium");
+        final java.util.logging.Logger julLogger = java.util.logging.Logger
+                .getLogger("org.eclipse.californium.scandium");
+        if (slf4jLogger.isTraceEnabled()) {
+            julLogger.setLevel(Level.FINEST);
+        } else if (slf4jLogger.isDebugEnabled()) {
+            julLogger.setLevel(Level.FINER);
+        } else if (slf4jLogger.isInfoEnabled()) {
+            julLogger.setLevel(Level.FINE);
+        } else if (slf4jLogger.isWarnEnabled()) {
+            julLogger.setLevel(Level.WARNING);
+        } else if (slf4jLogger.isErrorEnabled()) {
+            julLogger.setLevel(Level.SEVERE);
+        }
+    }
 
     @Before
     public void start() {
@@ -102,6 +126,8 @@ public class BootstrapTest {
     @Test
     public void bootstrap_with_store_entry_changed() {
         // TODO creating a LeshanClient with a server address should probably fill its server object...
+        // openssl genrsa -aes128 -out key.pem
+        // TODO should deletion of servers result in endpoints also being destroyed?
 
         final AtomicInteger bootstrapCreateCount = new AtomicInteger(0);
         for (final ObjectEnabler enabler : helper.clientObjects) {
@@ -134,6 +160,8 @@ public class BootstrapTest {
         assertServerInstanceValues(1, 0, createServerConfig());
 
         // TODO should then register based upon the Security and Server retrieved.
+        // We need to create a new secure endpoint on the CoapServer, attach the correct PSK keys, then use that to
+        // connect up
         final RegisterResponse registerResponse = helper.client.send(new RegisterRequest(STORED_ENDPOINT_IDENTIFIER));
         assertEquals(ResponseCode.CREATED, registerResponse.getCode());
     }
@@ -246,6 +274,21 @@ public class BootstrapTest {
     private static SecurityInfo createSecurityInfo() {
         return SecurityInfo.newPreSharedKeyInfo(STORED_ENDPOINT_IDENTIFIER, PUBLIC_KEY_OR_IDENTITY,
                 PRIVATE_KEY.getBytes());
+    }
+
+    @Test
+    public void test() {
+        final String key2 = "0788CB22F276A77A17981A94863533A9";
+        final String key = "j9POrme0G0KeCZHjY33Vqeh7YoKQdu96R/S9Uw7BtxmSAmWA7pkRXymwejakewCa"
+                + "uKir/aa9V7LYiNof4iV8ouucX3gyuX2LrY6ZqxwOzzCKOy9y+07AqLBGcDR3NOxW"
+                + "SUZU28ExxekXWUF/o4D1T9hu4u+vBOx1wv7fjQ5T9ZOLSuN9gMRrJo2Kp6DqWajb"
+                + "iDXk6PN4fTNbP/M5bkw3OxCRiOYsPYJFnVnZobaFVyOx1b7kYNaF+dfthpRSXYV7"
+                + "JKuCWgNuQ4eivI6Lx20PGGd30gbYefezUfLT0IvuQ78hron4n9gdjne569OCLlpS"
+                + "i+FXKxfO3MQZMoojEg0rvOp6THPb2zL6lh6bQqBM1/ay0/sWIZfLbCwo0hEuGQvM"
+                + "Pb9m3yw0A0lhjD+S1UiOSEpSSE2XKAh6GWxRLpxxLrg=";
+
+        System.err.println("Bytes: " + key.getBytes().length + "," + key2.getBytes().length);
+
     }
 
     private static ServerSecurity createServerSecurity() {
